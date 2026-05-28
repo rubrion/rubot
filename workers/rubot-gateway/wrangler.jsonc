@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rubot-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // Secrets set via `wrangler secret put <NAME>` (NOT here):
+  //   GATEWAY_API_KEY        — inbound auth from the chat-source adapter
+  //   ADMIN_API_KEY          — auth for /admin/identity-bindings CRUD
+  //   BEARER_SIGNING_SECRET  — HMAC-SHA256 key for mbr.v1.* bearers
+  //   MIDDLEWARE_API_KEY     — service key for middleware self-heal callbacks
+  //   CF_ACCESS_CLIENT_ID    — Cloudflare Access service token id (optional)
+  //   CF_ACCESS_CLIENT_SECRET — Cloudflare Access service token secret (optional)
+  "vars": {
+    "ENVIRONMENT": "dev",
+    "RUBOT_DEPLOYMENT_HASH": "local",
+    "ORCHESTRATOR_URL": "http://localhost:8001",
+    "RUBOT_DATA_AUTH": "bearer",
+    "RUBOT_OPEN_TENANT": "default"
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "rubot_data", "database_id": "REPLACE_ME" }
+  ],
+  "kv_namespaces": [
+    { "binding": "PROVISIONING", "id": "REPLACE_ME" }
+  ],
+  "services": [
+    { "binding": "MIDDLEWARE", "service": "rubot-middleware" }
+  ]
+}

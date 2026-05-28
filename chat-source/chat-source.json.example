@@ -1,0 +1,39 @@
+{
+  "$comment": "Blueprint for a chat-source adapter config. Copy + adapt to your tool of choice (OpenClaw, n8n, custom bot, etc.). This file is NOT consumed by rubot — rubot exposes an HTTP API; the adapter is whatever you choose.",
+
+  "gateway": {
+    "url": "${RUBOT_GATEWAY_URL}",
+    "auth": {
+      "type": "bearer",
+      "token_env": "GATEWAY_API_KEY"
+    },
+    "timeout_seconds": 60
+  },
+
+  "channels": {
+    "default": {
+      "type": "whatsapp",
+      "allow_senders": [
+        "+15555550100",
+        "+15555550101"
+      ],
+      "deny_senders": []
+    }
+  },
+
+  "headers": {
+    "session": "x-chat-source-session-id",
+    "sender": "x-chat-source-sender-id"
+  },
+
+  "session": {
+    "reset_triggers": ["/new", "/reset", "/start"],
+    "idle_minutes": 120,
+    "daily_reset_hour_utc": 7
+  },
+
+  "model": {
+    "default": "rubot",
+    "stream": false
+  }
+}

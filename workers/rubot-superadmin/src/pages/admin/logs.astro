@@ -1,0 +1,18 @@
+---
+import SuperAdmin from "../../layouts/SuperAdmin.astro";
+---
+
+<SuperAdmin title="Logs — rubot superadmin" active="logs">
+  <div style="background:#111827;border:1px solid #1f2937;border-radius:12px;padding:32px;color:#9ca3af">
+    <h2 style="margin:0 0 12px;color:#e5e7eb;font-size:18px">Logs not wired</h2>
+    <p style="margin:0 0 12px">
+      Cross-service structured logs land here once a sink is configured.
+      Same wiring pattern as the tenant usage page — see
+      <a href="https://github.com/rubrion/rubot" style="color:#c084fc">docs/observability.md</a>.
+    </p>
+    <p style="margin:0">
+      Once a sink is in place, this page renders by-tenant + by-service
+      rollups, with drill-down by trace_id.
+    </p>
+  </div>
+</SuperAdmin>

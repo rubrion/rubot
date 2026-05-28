@@ -1,0 +1,13 @@
+---
+import { currentManager, isBearerMode } from "../lib/session";
+import type { RubotEnv } from "../lib/middleware";
+
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+if (!isBearerMode(env)) {
+  return Astro.redirect("/login");
+}
+
+const cookie = Astro.request.headers.get("Cookie");
+const manager = await currentManager(env, cookie);
+return Astro.redirect(manager ? "/dashboard" : "/login");
+---

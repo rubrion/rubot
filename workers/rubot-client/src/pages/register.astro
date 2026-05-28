@@ -1,0 +1,69 @@
+---
+import Auth from "../layouts/Auth.astro";
+import { callMiddleware, type RubotEnv, type ApiEnvelope } from "../lib/middleware";
+
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+
+let error: string | null = null;
+let pending = false;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const email = String(form.get("email") ?? "").trim();
+  const password = String(form.get("password") ?? "");
+
+  const upstream = await callMiddleware(env, {
+    method: "POST",
+    path: "/api/auth/register",
+    contentType: "application/json",
+    body: JSON.stringify({ email, password }),
+  });
+  const body = (await upstream.json().catch(() => null)) as
+    | ApiEnvelope<{ pending_confirmation: boolean }>
+    | null;
+
+  if (upstream.ok && body?.success) {
+    pending = true;
+  } else {
+    error = body && !body.success ? body.error : "register_failed";
+  }
+}
+---
+
+<Auth title="Register — rubot">
+  <h1>Create account</h1>
+  <p class="lead">Manager accounts own one or more tenants.</p>
+
+  {error && <div class="error">{error}</div>}
+
+  {pending ? (
+    <div>
+      <p>
+        Check your email for a confirmation link. If
+        <code>RESEND_API_KEY</code> is empty, the link is printed to the
+        rubot-middleware worker logs.
+      </p>
+      <div class="alt">
+        <a href="/login">Back to sign in</a>
+      </div>
+    </div>
+  ) : (
+    <>
+      <form method="POST">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="password">Password (min 8)</label>
+          <input id="password" name="password" type="password" minlength="8" required autocomplete="new-password" />
+        </div>
+        <button type="submit">Create account</button>
+      </form>
+
+      <div class="alt">
+        <a href="/login">Already have an account? Sign in</a>
+      </div>
+    </>
+  )}
+</Auth>

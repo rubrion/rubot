@@ -1,0 +1,84 @@
+---
+import Dashboard from "../../../layouts/Dashboard.astro";
+import TenantNav from "../../../components/TenantNav.astro";
+import { callMiddleware, type RubotEnv, type ApiEnvelope } from "../../../lib/middleware";
+
+interface SenderRow {
+  sender_id: string;
+  created_at: number;
+}
+
+const { tenantId } = Astro.params as { tenantId: string };
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+const cookie = Astro.request.headers.get("Cookie");
+
+let actionError: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const sender_id = String(form.get("sender_id") ?? "").trim();
+  const r = await callMiddleware(env, {
+    method: "DELETE",
+    path: `/api/tenant/${encodeURIComponent(tenantId)}/senders/${encodeURIComponent(sender_id)}`,
+    cookie: cookie ?? undefined,
+  });
+  const body = (await r.json().catch(() => null)) as ApiEnvelope<unknown> | null;
+  if (!(r.ok && body?.success)) {
+    actionError = body && !body.success ? body.error : "revoke_failed";
+  }
+}
+
+let senders: SenderRow[] = [];
+const r = await callMiddleware(env, {
+  method: "GET",
+  path: `/api/tenant/${encodeURIComponent(tenantId)}/senders`,
+  cookie: cookie ?? undefined,
+});
+const body = (await r.json().catch(() => null)) as
+  | ApiEnvelope<{ senders: SenderRow[] }>
+  | null;
+if (r.ok && body?.success) senders = body.data.senders;
+
+function fmtAge(ts: number): string {
+  const s = Math.max(0, Math.floor(Date.now() / 1000) - ts);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+---
+
+<Dashboard title={`${tenantId} senders — rubot`}>
+  <TenantNav tenantId={tenantId} active="senders" />
+
+  {actionError && <div style="background:#7f1d1d;color:#fecaca;padding:10px 12px;border-radius:8px;margin-bottom:16px">{actionError}</div>}
+
+  <p style="color:#9ca3af;font-size:14px">
+    Each row is a chat-source sender bound to this tenant by a consumed
+    PIN. Revoking unbinds the sender; new chat-source turns from that id
+    will fail at <code>/api/internal/bind-session</code> until a new PIN
+    is consumed.
+  </p>
+
+  {senders.length === 0 ? (
+    <p style="color:#9ca3af">No senders bound yet. Generate a PIN on the overview page and have the user consume it.</p>
+  ) : (
+    <ul style="list-style:none;padding:0;margin:0">
+      {senders.map((s) => (
+        <li style="display:flex;align-items:center;gap:16px;padding:12px 16px;border:1px solid #1f2937;border-radius:8px;margin-bottom:8px">
+          <code style="flex:1;font-family:ui-monospace,monospace">{s.sender_id}</code>
+          <span style="color:#9ca3af;font-size:13px">{fmtAge(s.created_at)}</span>
+          <form method="POST" style="margin:0">
+            <input type="hidden" name="sender_id" value={s.sender_id} />
+            <button
+              type="submit"
+              style="padding:6px 12px;background:#7f1d1d;color:#fecaca;border:0;border-radius:6px;cursor:pointer;font-size:13px"
+            >
+              Revoke
+            </button>
+          </form>
+        </li>
+      ))}
+    </ul>
+  )}
+</Dashboard>

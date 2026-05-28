@@ -1,0 +1,27 @@
+{
+	"name": "rubot-superadmin",
+	"type": "module",
+	"version": "0.0.1",
+	"engines": {
+		"node": ">=22.12.0"
+	},
+	"scripts": {
+		"dev": "astro dev",
+		"build": "astro build",
+		"preview": "astro build && astro preview",
+		"astro": "astro",
+		"generate-types": "wrangler types",
+		"deploy": "astro build && wrangler deploy",
+		"cf-typegen": "wrangler types"
+	},
+	"dependencies": {
+		"@astrojs/cloudflare": "^13.6.0",
+		"astro": "^6.4.2"
+	},
+	"devDependencies": {
+		"wrangler": "^4.95.0"
+	},
+	"overrides": {
+		"vite": "^7"
+	}
+}

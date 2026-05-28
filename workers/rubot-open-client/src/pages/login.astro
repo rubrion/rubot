@@ -1,0 +1,59 @@
+---
+import Auth from "../layouts/Auth.astro";
+import { callMiddleware, type RubotEnv, type ApiEnvelope } from "../lib/middleware";
+
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const email = String(form.get("email") ?? "").trim();
+  const password = String(form.get("password") ?? "");
+
+  if (!email || !password) {
+    error = "missing_credentials";
+  } else {
+    const upstream = await callMiddleware(env, {
+      method: "POST",
+      path: "/api/auth/login",
+      contentType: "application/json",
+      body: JSON.stringify({ email, password }),
+    });
+    const body = (await upstream.json().catch(() => null)) as
+      | ApiEnvelope<{ manager_id: string; email: string; approved: boolean; is_superadmin: boolean }>
+      | null;
+
+    if (upstream.ok && body?.success) {
+      const setCookie = upstream.headers.get("Set-Cookie");
+      const headers = new Headers({ Location: "/dashboard" });
+      if (setCookie) headers.append("Set-Cookie", setCookie);
+      return new Response(null, { status: 302, headers });
+    }
+    error = body && !body.success ? body.error : "login_failed";
+  }
+}
+---
+
+<Auth title="Sign in — rubot open">
+  <h1>Sign in</h1>
+  <p class="lead">Open-mode operator dashboard.</p>
+
+  {error && <div class="error">{error}</div>}
+
+  <form method="POST">
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required autocomplete="email" />
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required autocomplete="current-password" />
+    </div>
+    <button type="submit">Sign in</button>
+  </form>
+
+  <div class="alt">
+    <a href="/register">Create account</a> · <a href="/forgot-password">Forgot password</a>
+  </div>
+</Auth>

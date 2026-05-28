@@ -1,0 +1,31 @@
+/**
+ * rubot-open-client — Astro-on-Workers open-mode operator dashboard.
+ *
+ * Same talks-to-middleware-over-service-binding pattern as rubot-client,
+ * but RUBOT_DATA_AUTH is pinned to `open`. Open-mode middleware unmounts
+ * /api/tenant/* + /api/provision/*, so this client only consumes
+ * /api/auth/* + /api/admin/* (super-admins can use this URL too).
+ *
+ * v1 surface: registration + login + pending-approval screen + a small
+ * "approved — global admin UI coming soon" landing card. Full
+ * global-admin UI is a separate iteration.
+ */
+{
+  "compatibility_date": "2026-05-28",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "name": "rubot-open-client",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "RUBOT_DATA_AUTH": "open"
+  },
+  "services": [
+    { "binding": "MIDDLEWARE", "service": "rubot-middleware" }
+  ]
+}

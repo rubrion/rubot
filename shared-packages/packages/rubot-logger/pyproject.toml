@@ -1,0 +1,20 @@
+[project]
+name = "rubot-logger"
+version = "0.1.0"
+description = "Structured logging envelope and context propagation for rubot services"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+fastapi = ["starlette>=0.38.0"]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.24.0", "httpx>=0.28.0"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rubot_logger*"]

@@ -1,0 +1,79 @@
+---
+/**
+ * Open-mode dashboard chrome. Gates on session presence; pending state
+ * surfaces inline. Full global-admin UI is future work — this layout
+ * just hosts the landing card.
+ */
+import type { RubotEnv } from "../lib/middleware";
+import { currentManager } from "../lib/session";
+
+interface Props {
+  title?: string;
+}
+const { title = "rubot open dashboard" } = Astro.props as Props;
+
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+const cookie = Astro.request.headers.get("Cookie");
+const manager = await currentManager(env, cookie);
+if (!manager) return Astro.redirect("/login");
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0a0a0a;
+        --fg: #e5e7eb;
+        --muted: #9ca3af;
+        --brand: #38bdf8;
+        --card: #111827;
+        --border: #1f2937;
+      }
+      body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+      header.topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 24px; border-bottom: 1px solid var(--border);
+      }
+      header.topbar .brand { font-weight: 700; color: var(--brand); font-size: 18px; }
+      header.topbar .who { color: var(--muted); font-size: 14px; }
+      main { max-width: 720px; margin: 0 auto; padding: 32px 24px; }
+      .banner {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 12px; padding: 24px; margin: 0; color: var(--muted);
+      }
+      .banner h1 { margin: 0 0 8px; color: var(--fg); font-size: 20px; }
+      a { color: var(--brand); }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <span class="brand">rubot · open</span>
+      <span class="who">{manager.email}</span>
+    </header>
+    <main>
+      {!manager.approved ? (
+        <div class="banner">
+          <h1>Pending approval</h1>
+          <p>
+            Your account <strong>{manager.email}</strong> is awaiting
+            super-admin approval. Open-mode dashboards still need an
+            approved operator before they unlock.
+          </p>
+          <form method="POST" action="/api/proxy/auth/logout" style="margin-top:12px">
+            <button
+              type="submit"
+              style="padding:8px 14px;background:var(--brand);color:#0a0a0a;border:0;border-radius:8px;font-weight:600;cursor:pointer"
+            >Sign out</button>
+          </form>
+        </div>
+      ) : (
+        <slot manager={manager} />
+      )}
+    </main>
+  </body>
+</html>

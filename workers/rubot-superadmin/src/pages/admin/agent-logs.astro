@@ -1,0 +1,20 @@
+---
+import SuperAdmin from "../../layouts/SuperAdmin.astro";
+---
+
+<SuperAdmin title="Agent logs — rubot superadmin" active="agent-logs">
+  <div style="background:#111827;border:1px solid #1f2937;border-radius:12px;padding:32px;color:#9ca3af">
+    <h2 style="margin:0 0 12px;color:#e5e7eb;font-size:18px">Agent logs not wired</h2>
+    <p style="margin:0 0 12px">
+      Specialist agent log messages (planner decisions, tool calls,
+      retries) will surface here once the log sink + agent emitters are
+      integrated. See <a href="https://github.com/rubrion/rubot" style="color:#c084fc">docs/observability.md</a>.
+    </p>
+    <p style="margin:0">
+      Agents already emit structured envelopes via
+      <code>@rubot/logger</code> with the same <code>trace_id</code> the
+      gateway minted, so the back-fill is a SELECT once the store is
+      online.
+    </p>
+  </div>
+</SuperAdmin>

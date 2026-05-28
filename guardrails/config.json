@@ -1,0 +1,23 @@
+{
+  "enabled": {
+    "regex": true,
+    "mlp": true,
+    "output": true
+  },
+  "mlp": {
+    "threshold_block": 0.60,
+    "threshold_release": 0.60
+  },
+  "output": {
+    "model": "gpt-4.1-mini",
+    "temperature": 0.1,
+    "pillars": ["attack", "nsfw", "privacy", "security"],
+    "threshold_block": 4,
+    "threshold_review": 3
+  },
+  "messages": {
+    "blocked_regex": "Your message contains content that violates our usage policy. Please rephrase.",
+    "blocked_mlp": "I'm unable to help with that request. I'm an AI assistant focused on domain-specific data queries. If you need help with data or analytics, I'm here for you.",
+    "blocked_output": "I couldn't generate a safe response for that message. Please try rephrasing your question."
+  }
+}

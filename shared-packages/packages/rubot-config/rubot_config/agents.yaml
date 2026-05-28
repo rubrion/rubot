@@ -1,0 +1,46 @@
+# Packaged baseline config for the rubot-config library.
+#
+# This file ships with the wheel and provides:
+#   1. `defaults:`  — applied to every agent (listed or not)
+#   2. Built-in agent profiles considered part of the shared library
+#
+# Per-deployment overrides go on env vars (works at any layer: Railway,
+# docker compose, etc.). Or ship a custom YAML and point
+# `RUBOT_CONFIG_PATH` at it.
+#
+# ── Merge order (last wins) ────────────────────────────────────────────
+#   1. defaults           (this file)
+#   2. per-agent section  (this file)
+#   3. env overrides      AGENT_{AGENT_NAME}_{PARAM}
+#
+# Agent-name normalization for env vars: hyphens become underscores and
+# the name is upper-cased. Example: agent "my-agent" -> prefix `AGENT_MY_AGENT_`.
+#
+# Env override examples:
+#   AGENT_TEMPLATE_MODEL=gpt-4o
+#   AGENT_TEMPLATE_TEMPERATURE=0.5
+#   AGENT_MYAGENT_PROVIDER=anthropic
+#   AGENT_MYAGENT_MODEL=claude-sonnet-4-5
+#
+# Parameters beyond provider/model/base_url/api_key_env are forwarded to
+# Pydantic AI's ModelSettings. Standard fields (temperature, max_tokens,
+# top_p, timeout, seed, thinking, etc.) pass through as-is.  Any other
+# key is auto-prefixed with the provider name following Pydantic AI's
+# convention (e.g. reasoning_effort -> openai_reasoning_effort).
+# ──────────────────────────────────────────────────────────────────────
+
+defaults:
+  provider: openai
+  model: gpt-4o-mini
+  timeout: 30.0
+  max_tokens: 4096
+
+agents:
+
+  # `template` = agents/rubot-agent-template. Example block; fork your
+  # own agent and add a sibling entry, or rely on the defaults block
+  # above and override via env vars per deployment.
+  template:
+    provider: openai
+    model: gpt-4o-mini
+    max_tokens: 4096

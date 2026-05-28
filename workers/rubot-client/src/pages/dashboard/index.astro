@@ -1,0 +1,117 @@
+---
+import Dashboard from "../../layouts/Dashboard.astro";
+import { callMiddleware, type RubotEnv, type ApiEnvelope } from "../../lib/middleware";
+
+interface TenantSummary {
+  tenant_id: string;
+  name: string | null;
+  created_at: number;
+}
+
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+const cookie = Astro.request.headers.get("Cookie");
+
+let createdSecret: { tenant_id: string; secret: string } | null = null;
+let createError: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const tenant_id = String(form.get("tenant_id") ?? "").trim();
+  const name = String(form.get("name") ?? "").trim() || null;
+
+  const upstream = await callMiddleware(env, {
+    method: "POST",
+    path: "/api/tenant",
+    cookie: cookie ?? undefined,
+    contentType: "application/json",
+    body: JSON.stringify({ tenant_id, name }),
+  });
+  const body = (await upstream.json().catch(() => null)) as
+    | ApiEnvelope<{ tenant_id: string; name: string | null; secret: string }>
+    | null;
+  if (upstream.ok && body?.success) {
+    createdSecret = { tenant_id: body.data.tenant_id, secret: body.data.secret };
+  } else {
+    createError = body && !body.success ? body.error : "create_failed";
+  }
+}
+
+let tenants: TenantSummary[] = [];
+const listRes = await callMiddleware(env, {
+  method: "GET",
+  path: "/api/tenant",
+  cookie: cookie ?? undefined,
+});
+const listBody = (await listRes.json().catch(() => null)) as
+  | ApiEnvelope<{ tenants: TenantSummary[] }>
+  | null;
+if (listRes.ok && listBody?.success) {
+  tenants = listBody.data.tenants;
+}
+---
+
+<Dashboard title="Tenants — rubot">
+  <h1 style="margin-top:0">Tenants</h1>
+
+  {createdSecret && (
+    <div style="background:#064e3b;border:1px solid #065f46;border-radius:8px;padding:16px;margin-bottom:24px">
+      <p style="margin:0 0 8px"><strong>Tenant created:</strong> {createdSecret.tenant_id}</p>
+      <p style="margin:0 0 8px;color:#a7f3d0">
+        Copy this secret <strong>now</strong>. It's shown once and stored
+        only as a SHA-256 hash server-side.
+      </p>
+      <code style="display:block;background:#0a0a0a;padding:10px;border-radius:6px;word-break:break-all">
+        {createdSecret.secret}
+      </code>
+    </div>
+  )}
+
+  {createError && (
+    <div style="background:#7f1d1d;color:#fecaca;padding:10px 12px;border-radius:8px;margin-bottom:16px">
+      {createError}
+    </div>
+  )}
+
+  <section style="margin-bottom:32px">
+    {tenants.length === 0 ? (
+      <p style="color:#9ca3af">No tenants yet. Create one below.</p>
+    ) : (
+      <ul style="list-style:none;padding:0;margin:0">
+        {tenants.map((t) => (
+          <li style="padding:14px 16px;border:1px solid #1f2937;border-radius:8px;margin-bottom:8px">
+            <a href={`/dashboard/${t.tenant_id}`} style="color:#f59e0b;font-weight:600">
+              {t.name ?? t.tenant_id}
+            </a>
+            <span style="color:#6b7280;margin-left:8px;font-family:ui-monospace,monospace;font-size:13px">
+              {t.tenant_id}
+            </span>
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+
+  <section style="border:1px solid #1f2937;border-radius:12px;padding:24px">
+    <h2 style="margin-top:0;font-size:16px">Create tenant</h2>
+    <form method="POST" style="display:grid;gap:12px">
+      <input
+        name="tenant_id"
+        placeholder="tenant-id (lowercase, no spaces)"
+        required
+        pattern="[A-Za-z0-9_\-\.]{1,64}"
+        style="padding:10px 12px;background:#0f172a;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb"
+      />
+      <input
+        name="name"
+        placeholder="Display name (optional)"
+        style="padding:10px 12px;background:#0f172a;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb"
+      />
+      <button
+        type="submit"
+        style="padding:10px;background:#f59e0b;color:#111827;border:0;border-radius:8px;font-weight:600;cursor:pointer"
+      >
+        Create
+      </button>
+    </form>
+  </section>
+</Dashboard>

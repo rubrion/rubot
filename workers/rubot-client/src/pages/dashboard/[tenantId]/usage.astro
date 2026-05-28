@@ -1,0 +1,26 @@
+---
+import Dashboard from "../../../layouts/Dashboard.astro";
+import TenantNav from "../../../components/TenantNav.astro";
+
+const { tenantId } = Astro.params as { tenantId: string };
+---
+
+<Dashboard title={`${tenantId} usage — rubot`}>
+  <TenantNav tenantId={tenantId} active="usage" />
+
+  <div style="background:#111827;border:1px solid #1f2937;border-radius:12px;padding:32px;color:#9ca3af">
+    <h2 style="margin:0 0 12px;color:#e5e7eb;font-size:18px">Usage not wired</h2>
+    <p style="margin:0 0 12px">
+      The scaffold ships structured logs via <code>@rubot/logger</code>
+      but doesn't bundle a log sink. Wire one of the options in
+      <a href="https://github.com/rubrion/rubot" style="color:#f59e0b">docs/observability.md</a>
+      (CF Logpush, Datadog, an OTel collector, …) and back this page
+      with the resulting store.
+    </p>
+    <p style="margin:0">
+      Every hop already emits the same <code>trace_id</code>; once a
+      sink is in place, the per-tenant rollup is a single GROUP BY
+      query.
+    </p>
+  </div>
+</Dashboard>

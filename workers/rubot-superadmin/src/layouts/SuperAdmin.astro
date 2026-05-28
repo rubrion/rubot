@@ -1,0 +1,115 @@
+---
+/**
+ * SuperAdmin chrome — gates on session AND is_superadmin=1.
+ *
+ *   no session              → 302 /login
+ *   session, not SA         → 403 banner with link back to other clients
+ *   session, SA but pending → 403 banner (a revoked SA should re-approve before acting)
+ *   session, SA, approved   → render slot
+ */
+import type { RubotEnv } from "../lib/middleware";
+import { currentManager } from "../lib/session";
+
+interface Props {
+  title?: string;
+  active?: "managers" | "logs" | "agent-logs";
+}
+const { title = "rubot — superadmin", active = "managers" } = Astro.props as Props;
+
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+const cookie = Astro.request.headers.get("Cookie");
+const manager = await currentManager(env, cookie);
+if (!manager) return Astro.redirect("/login");
+
+const denied = !manager.is_superadmin || !manager.approved;
+const reason = !manager.is_superadmin ? "not_superadmin" : "not_approved";
+
+const navItems: { id: NonNullable<Props["active"]>; label: string; href: string }[] = [
+  { id: "managers", label: "Managers", href: "/admin" },
+  { id: "logs", label: "Logs", href: "/admin/logs" },
+  { id: "agent-logs", label: "Agent logs", href: "/admin/agent-logs" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0a0a0a;
+        --fg: #e5e7eb;
+        --muted: #9ca3af;
+        --brand: #c084fc;
+        --card: #111827;
+        --border: #1f2937;
+      }
+      body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+      header.topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 24px; border-bottom: 1px solid var(--border);
+      }
+      header.topbar .brand { font-weight: 700; color: var(--brand); font-size: 18px; }
+      header.topbar .who { color: var(--muted); font-size: 14px; }
+      nav.subnav {
+        display: flex; gap: 4px; border-bottom: 1px solid var(--border);
+        padding: 0 24px;
+      }
+      nav.subnav a {
+        padding: 10px 14px; text-decoration: none; font-size: 14px;
+        color: var(--muted); border-bottom: 2px solid transparent;
+      }
+      nav.subnav a.active { color: var(--brand); border-bottom-color: var(--brand); }
+      main { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+      .banner {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 12px; padding: 24px; color: var(--muted);
+        max-width: 640px; margin: 32px auto;
+      }
+      .banner h1 { margin: 0 0 8px; color: var(--fg); font-size: 20px; }
+      a { color: var(--brand); }
+    </style>
+  </head>
+  <body>
+    {denied ? (
+      <main>
+        <div class="banner">
+          <h1>Super-admin only</h1>
+          <p>
+            Account <strong>{manager.email}</strong> can't access this
+            URL (<code>{reason}</code>).
+          </p>
+          <p>
+            If you have a manager account, sign in to
+            <a href="/">rubot-client</a> (bearer mode) or
+            <a href="/">rubot-open-client</a> (open mode) instead.
+          </p>
+          <form method="POST" action="/api/proxy/auth/logout" style="margin-top:12px">
+            <button
+              type="submit"
+              style="padding:8px 14px;background:var(--brand);color:#0a0a0a;border:0;border-radius:8px;font-weight:600;cursor:pointer"
+            >Sign out</button>
+          </form>
+        </div>
+      </main>
+    ) : (
+      <>
+        <header class="topbar">
+          <span class="brand">rubot · superadmin</span>
+          <span class="who">{manager.email}</span>
+        </header>
+        <nav class="subnav">
+          {navItems.map((item) => (
+            <a href={item.href} class={item.id === active ? "active" : ""}>{item.label}</a>
+          ))}
+        </nav>
+        <main>
+          <slot />
+        </main>
+      </>
+    )}
+  </body>
+</html>

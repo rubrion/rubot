@@ -1,0 +1,27 @@
+---
+interface Props {
+  tenantId: string;
+  active: "overview" | "providers" | "agents" | "senders" | "usage";
+}
+const { tenantId, active } = Astro.props as Props;
+const items: { id: Props["active"]; label: string; href: string }[] = [
+  { id: "overview", label: "Overview", href: `/dashboard/${tenantId}` },
+  { id: "providers", label: "Providers", href: `/dashboard/${tenantId}/providers` },
+  { id: "agents", label: "Agents", href: `/dashboard/${tenantId}/agents` },
+  { id: "senders", label: "Senders", href: `/dashboard/${tenantId}/senders` },
+  { id: "usage", label: "Usage", href: `/dashboard/${tenantId}/usage` },
+];
+---
+
+<nav style="display:flex;gap:4px;border-bottom:1px solid #1f2937;margin-bottom:24px">
+  <a href="/dashboard" style="padding:10px 12px;color:#6b7280;text-decoration:none;font-size:14px">← all tenants</a>
+  {items.map((item) => (
+    <a
+      href={item.href}
+      style={`padding:10px 14px;text-decoration:none;font-size:14px;border-bottom:2px solid ${item.id === active ? "#f59e0b" : "transparent"};color:${item.id === active ? "#f59e0b" : "#9ca3af"}`}
+    >
+      {item.label}
+    </a>
+  ))}
+</nav>
+<h1 style="margin:0 0 24px"><code style="font-family:ui-monospace,monospace;color:#f59e0b">{tenantId}</code></h1>

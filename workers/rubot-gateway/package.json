@@ -1,0 +1,20 @@
+{
+  "name": "rubot-gateway",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "echo 'Use deploy:prod or deploy:staging — wrangler.jsonc uses env blocks, raw deploy ships empty bindings.' && exit 1",
+    "deploy:prod": "wrangler deploy --env production --minify",
+    "deploy:staging": "wrangler deploy --env staging --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+  },
+  "dependencies": {
+    "hono": "^4.12.5",
+    "@rubot/logger": "file:../../shared-packages/packages/rubot-logger-ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.70.0"
+  }
+}

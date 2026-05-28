@@ -1,0 +1,133 @@
+---
+import Dashboard from "../../../layouts/Dashboard.astro";
+import TenantNav from "../../../components/TenantNav.astro";
+import { callMiddleware, type RubotEnv, type ApiEnvelope } from "../../../lib/middleware";
+
+interface Integration {
+  provider: string;
+  has_access_token: boolean;
+  has_refresh_token: boolean;
+  expires_at: number;
+  auto_renew: number;
+  updated_at: number;
+}
+
+const { tenantId } = Astro.params as { tenantId: string };
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+const cookie = Astro.request.headers.get("Cookie");
+
+let actionError: string | null = null;
+let actionOk: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const op = String(form.get("op") ?? "");
+  const provider = String(form.get("provider") ?? "").trim();
+
+  if (op === "wire") {
+    const access_token = String(form.get("access_token") ?? "").trim();
+    const refresh_token = String(form.get("refresh_token") ?? "").trim() || null;
+    const expires_at = Number(form.get("expires_at") ?? 0);
+    const auto_renew = form.get("auto_renew") === "on";
+
+    const r = await callMiddleware(env, {
+      method: "POST",
+      path: `/api/tenant/${encodeURIComponent(tenantId)}/integrations/${encodeURIComponent(provider)}`,
+      cookie: cookie ?? undefined,
+      contentType: "application/json",
+      body: JSON.stringify({ access_token, refresh_token, expires_at, auto_renew }),
+    });
+    const body = (await r.json().catch(() => null)) as ApiEnvelope<unknown> | null;
+    if (r.ok && body?.success) actionOk = `${provider}_wired`;
+    else actionError = body && !body.success ? body.error : "wire_failed";
+  } else if (op === "revoke") {
+    const r = await callMiddleware(env, {
+      method: "DELETE",
+      path: `/api/tenant/${encodeURIComponent(tenantId)}/integrations/${encodeURIComponent(provider)}`,
+      cookie: cookie ?? undefined,
+    });
+    const body = (await r.json().catch(() => null)) as ApiEnvelope<unknown> | null;
+    if (r.ok && body?.success) actionOk = `${provider}_revoked`;
+    else actionError = body && !body.success ? body.error : "revoke_failed";
+  }
+}
+
+let integrations: Integration[] = [];
+const r = await callMiddleware(env, {
+  method: "GET",
+  path: `/api/tenant/${encodeURIComponent(tenantId)}/integrations`,
+  cookie: cookie ?? undefined,
+});
+const body = (await r.json().catch(() => null)) as
+  | ApiEnvelope<{ integrations: Integration[] }>
+  | null;
+if (r.ok && body?.success) integrations = body.data.integrations;
+
+function fmtExpires(ts: number): string {
+  if (!ts) return "no expiry";
+  const now = Math.floor(Date.now() / 1000);
+  if (ts <= now) return "expired";
+  return `${Math.floor((ts - now) / 60)}m`;
+}
+---
+
+<Dashboard title={`${tenantId} providers — rubot`}>
+  <TenantNav tenantId={tenantId} active="providers" />
+
+  {actionError && <div style="background:#7f1d1d;color:#fecaca;padding:10px 12px;border-radius:8px;margin-bottom:16px">{actionError}</div>}
+  {actionOk && <div style="background:#064e3b;color:#a7f3d0;padding:10px 12px;border-radius:8px;margin-bottom:16px">{actionOk}</div>}
+
+  <section style="margin-bottom:32px">
+    <h2 style="font-size:16px">Wired integrations</h2>
+    {integrations.length === 0 ? (
+      <p style="color:#9ca3af">None yet.</p>
+    ) : (
+      <ul style="list-style:none;padding:0;margin:0">
+        {integrations.map((it) => (
+          <li style="display:flex;align-items:center;gap:16px;padding:12px 16px;border:1px solid #1f2937;border-radius:8px;margin-bottom:8px">
+            <strong style="flex:1">{it.provider}</strong>
+            <span style="color:#9ca3af;font-size:13px">{fmtExpires(it.expires_at)}</span>
+            <span style="color:#9ca3af;font-size:13px">{it.auto_renew ? "auto-renew" : "manual"}</span>
+            <form method="POST" style="margin:0">
+              <input type="hidden" name="op" value="revoke" />
+              <input type="hidden" name="provider" value={it.provider} />
+              <button
+                type="submit"
+                style="padding:6px 12px;background:#7f1d1d;color:#fecaca;border:0;border-radius:6px;cursor:pointer;font-size:13px"
+              >
+                Revoke
+              </button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+
+  <section style="border:1px solid #1f2937;border-radius:12px;padding:24px">
+    <h2 style="margin-top:0;font-size:16px">Wire / update integration</h2>
+    <p style="color:#9ca3af;font-size:13px;margin-top:0">
+      v1 supports paste-API-key only. OAuth start flow is on the roadmap.
+      Provider name must match a sub-app mounted under
+      <code>src/providers/</code> in <code>rubot-middleware</code>.
+    </p>
+    <form method="POST" style="display:grid;gap:12px">
+      <input type="hidden" name="op" value="wire" />
+      <input name="provider" placeholder="provider id (e.g. example-provider)" required
+        pattern="[A-Za-z0-9_-]{1,64}"
+        style="padding:10px 12px;background:#0f172a;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb" />
+      <input name="access_token" placeholder="access token" required
+        style="padding:10px 12px;background:#0f172a;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb" />
+      <input name="refresh_token" placeholder="refresh token (optional)"
+        style="padding:10px 12px;background:#0f172a;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb" />
+      <input name="expires_at" placeholder="expires_at unix seconds (0 = no expiry)" type="number" value="0"
+        style="padding:10px 12px;background:#0f172a;border:1px solid #1f2937;border-radius:8px;color:#e5e7eb" />
+      <label style="font-size:13px;color:#9ca3af">
+        <input type="checkbox" name="auto_renew" /> auto-renew
+      </label>
+      <button type="submit" style="padding:10px;background:#f59e0b;color:#111827;border:0;border-radius:8px;font-weight:600;cursor:pointer">
+        Save
+      </button>
+    </form>
+  </section>
+</Dashboard>

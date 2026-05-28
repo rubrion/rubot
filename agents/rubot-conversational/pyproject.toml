@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=70"]
+
+[project]
+name = "rubot-conversational"
+version = "0.1.0"
+description = "General-purpose conversational agent for the rubot system."
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "pydantic-ai>=0.0.50",
+    "openai>=1.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "rubot-config",
+    "rubot-logger[fastapi]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

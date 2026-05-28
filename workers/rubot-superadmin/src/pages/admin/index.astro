@@ -1,0 +1,148 @@
+---
+import SuperAdmin from "../../layouts/SuperAdmin.astro";
+import { callMiddleware, type RubotEnv, type ApiEnvelope } from "../../lib/middleware";
+
+interface ManagerEntry {
+  manager_id: string;
+  email: string;
+  email_confirmed: number;
+  approved: number;
+  is_superadmin: number;
+  approved_at: number | null;
+  created_at: number;
+}
+
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+const cookie = Astro.request.headers.get("Cookie");
+const url = new URL(Astro.request.url);
+const status = (url.searchParams.get("status") || "pending").toLowerCase();
+
+let actionError: string | null = null;
+let actionOk: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const op = String(form.get("op") ?? "");
+  const id = String(form.get("manager_id") ?? "");
+  let path = "";
+  let body: string | null = null;
+
+  if (op === "approve") {
+    path = `/api/admin/managers/${encodeURIComponent(id)}/approve`;
+  } else if (op === "revoke") {
+    path = `/api/admin/managers/${encodeURIComponent(id)}/revoke`;
+    const reason = String(form.get("reason") ?? "").trim();
+    body = JSON.stringify({ reason: reason || null });
+  } else if (op === "promote") {
+    path = `/api/admin/managers/${encodeURIComponent(id)}/superadmin`;
+    body = JSON.stringify({ grant: true });
+  } else if (op === "demote") {
+    path = `/api/admin/managers/${encodeURIComponent(id)}/superadmin`;
+    body = JSON.stringify({ grant: false });
+  } else {
+    actionError = "invalid_op";
+  }
+
+  if (path) {
+    const r = await callMiddleware(env, {
+      method: "POST",
+      path,
+      cookie: cookie ?? undefined,
+      contentType: "application/json",
+      body: body ?? "{}",
+    });
+    const respBody = (await r.json().catch(() => null)) as ApiEnvelope<unknown> | null;
+    if (r.ok && respBody?.success) actionOk = `${op}_done`;
+    else actionError = respBody && !respBody.success ? respBody.error : `${op}_failed`;
+  }
+}
+
+const filterParam = status === "approved" || status === "pending" || status === "all" ? status : "pending";
+const listRes = await callMiddleware(env, {
+  method: "GET",
+  path: `/api/admin/managers?status=${filterParam}`,
+  cookie: cookie ?? undefined,
+});
+const listBody = (await listRes.json().catch(() => null)) as
+  | ApiEnvelope<{ managers: ManagerEntry[] }>
+  | null;
+const managers = listBody && listBody.success ? listBody.data.managers : [];
+
+function fmtAge(ts: number): string {
+  const s = Math.max(0, Math.floor(Date.now() / 1000) - ts);
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}
+---
+
+<SuperAdmin title="Managers — rubot superadmin" active="managers">
+  <h1 style="margin-top:0">Managers</h1>
+
+  {actionError && <div style="background:#7f1d1d;color:#fecaca;padding:10px 12px;border-radius:8px;margin-bottom:16px">{actionError}</div>}
+  {actionOk && <div style="background:#064e3b;color:#a7f3d0;padding:10px 12px;border-radius:8px;margin-bottom:16px">{actionOk}</div>}
+
+  <nav style="display:flex;gap:8px;margin-bottom:24px">
+    {(["pending", "approved", "all"] as const).map((tab) => (
+      <a
+        href={`?status=${tab}`}
+        style={`padding:6px 12px;text-decoration:none;font-size:13px;border-radius:8px;background:${filterParam === tab ? "#c084fc" : "#1f2937"};color:${filterParam === tab ? "#0a0a0a" : "#9ca3af"}`}
+      >{tab}</a>
+    ))}
+  </nav>
+
+  {managers.length === 0 ? (
+    <p style="color:#9ca3af">No managers in this state.</p>
+  ) : (
+    <ul style="list-style:none;padding:0;margin:0">
+      {managers.map((m) => (
+        <li style="padding:14px 16px;border:1px solid #1f2937;border-radius:8px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px">
+            <strong style="flex:1">{m.email}</strong>
+            <span style={`font-size:13px;color:${m.approved ? "#a7f3d0" : "#fecaca"}`}>
+              {m.approved ? "approved" : (m.email_confirmed ? "pending approval" : "pending email")}
+            </span>
+            {m.is_superadmin ? <span style="font-size:13px;color:#c084fc">super-admin</span> : null}
+            <span style="font-size:12px;color:#6b7280">registered {fmtAge(m.created_at)} ago</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            {!m.approved && (
+              <form method="POST" style="margin:0">
+                <input type="hidden" name="op" value="approve" />
+                <input type="hidden" name="manager_id" value={m.manager_id} />
+                <button type="submit" style="padding:6px 12px;background:#065f46;color:#a7f3d0;border:0;border-radius:6px;cursor:pointer;font-size:13px">Approve</button>
+              </form>
+            )}
+            {m.approved && (
+              <form method="POST" style="margin:0;display:flex;gap:6px">
+                <input type="hidden" name="op" value="revoke" />
+                <input type="hidden" name="manager_id" value={m.manager_id} />
+                <input
+                  name="reason"
+                  placeholder="reason (optional)"
+                  style="padding:6px 10px;background:#0f172a;border:1px solid #1f2937;border-radius:6px;color:#e5e7eb;font-size:13px"
+                />
+                <button type="submit" style="padding:6px 12px;background:#7f1d1d;color:#fecaca;border:0;border-radius:6px;cursor:pointer;font-size:13px">Revoke</button>
+              </form>
+            )}
+            {!m.is_superadmin && (
+              <form method="POST" style="margin:0">
+                <input type="hidden" name="op" value="promote" />
+                <input type="hidden" name="manager_id" value={m.manager_id} />
+                <button type="submit" style="padding:6px 12px;background:#581c87;color:#e9d5ff;border:0;border-radius:6px;cursor:pointer;font-size:13px">Promote SA</button>
+              </form>
+            )}
+            {m.is_superadmin && (
+              <form method="POST" style="margin:0">
+                <input type="hidden" name="op" value="demote" />
+                <input type="hidden" name="manager_id" value={m.manager_id} />
+                <button type="submit" style="padding:6px 12px;background:#1f2937;color:#9ca3af;border:0;border-radius:6px;cursor:pointer;font-size:13px">Demote SA</button>
+              </form>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )}
+</SuperAdmin>

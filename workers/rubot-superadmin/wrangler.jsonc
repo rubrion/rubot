@@ -1,0 +1,23 @@
+/**
+ * rubot-superadmin — Astro-on-Workers super-admin dashboard.
+ *
+ * Always works in both bearer + open modes (the super-admin role is on
+ * the managers row, not gated by RUBOT_DATA_AUTH). Talks to middleware
+ * over a Service Binding; calls /api/auth/* + /api/admin/*.
+ */
+{
+  "compatibility_date": "2026-05-28",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "name": "rubot-superadmin",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "services": [
+    { "binding": "MIDDLEWARE", "service": "rubot-middleware" }
+  ]
+}

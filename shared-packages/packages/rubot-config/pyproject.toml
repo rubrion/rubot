@@ -1,0 +1,27 @@
+[project]
+name = "rubot-config"
+version = "0.1.0"
+description = "Unified LLM/runtime configuration and base agent for rubot services"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0.0",
+    "pydantic-ai>=0.0.50",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rubot_config*"]
+
+[tool.setuptools.package-data]
+rubot_config = ["agents.yaml"]

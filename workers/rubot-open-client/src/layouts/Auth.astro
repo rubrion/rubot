@@ -1,0 +1,74 @@
+---
+interface Props {
+  title?: string;
+}
+const { title = "rubot — open" } = Astro.props as Props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0a0a0a;
+        --fg: #e5e7eb;
+        --muted: #9ca3af;
+        --brand: #38bdf8;
+        --card: #111827;
+        --border: #1f2937;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      main {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 24px;
+      }
+      .card {
+        width: 100%;
+        max-width: 380px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 32px;
+      }
+      h1 { margin: 0 0 8px; font-size: 22px; }
+      p.lead { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+      label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+      input {
+        width: 100%; padding: 10px 12px; background: #0f172a;
+        border: 1px solid var(--border); border-radius: 8px;
+        color: var(--fg); font-size: 14px; box-sizing: border-box;
+      }
+      .field { margin-bottom: 16px; }
+      button {
+        width: 100%; padding: 12px; background: var(--brand);
+        color: #0a0a0a; border: 0; border-radius: 8px;
+        font-weight: 600; font-size: 14px; cursor: pointer;
+      }
+      .error {
+        background: #7f1d1d; color: #fecaca; padding: 10px 12px;
+        border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+      }
+      .alt { margin-top: 24px; font-size: 13px; color: var(--muted); text-align: center; }
+      a { color: var(--brand); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="card">
+        <slot />
+      </div>
+    </main>
+  </body>
+</html>

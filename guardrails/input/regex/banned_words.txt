@@ -1,0 +1,22 @@
+# Placeholder banned-word list (English).
+# Replace with your organisation's actual list before production use.
+fuck
+shit
+asshole
+bastard
+bitch
+cunt
+damn
+dickhead
+motherfucker
+piss
+slut
+whore
+cock
+wanker
+twat
+nigger
+faggot
+retard
+kike
+spic

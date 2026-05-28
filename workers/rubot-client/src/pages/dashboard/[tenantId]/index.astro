@@ -1,0 +1,119 @@
+---
+import Dashboard from "../../../layouts/Dashboard.astro";
+import TenantNav from "../../../components/TenantNav.astro";
+import { callMiddleware, type RubotEnv, type ApiEnvelope } from "../../../lib/middleware";
+
+const { tenantId } = Astro.params as { tenantId: string };
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+const cookie = Astro.request.headers.get("Cookie");
+
+let pinData: { pin: string; expires_at: number } | null = null;
+let pinError: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const upstream = await callMiddleware(env, {
+    method: "POST",
+    path: "/api/provision/generate",
+    cookie: cookie ?? undefined,
+    contentType: "application/json",
+    body: JSON.stringify({ tenant_id: tenantId }),
+  });
+  const body = (await upstream.json().catch(() => null)) as
+    | ApiEnvelope<{ pin: string; expires_at: number }>
+    | null;
+  if (upstream.ok && body?.success) pinData = body.data;
+  else pinError = body && !body.success ? body.error : "pin_failed";
+}
+
+// Read current PIN (lazy-init on server).
+if (!pinData) {
+  const r = await callMiddleware(env, {
+    method: "GET",
+    path: `/api/provision/pin/${encodeURIComponent(tenantId)}`,
+    cookie: cookie ?? undefined,
+  });
+  const body = (await r.json().catch(() => null)) as
+    | ApiEnvelope<{ pin: string; expires_at: number }>
+    | null;
+  if (r.ok && body?.success) pinData = body.data;
+}
+
+// Lightweight counts for the overview cards.
+async function fetchCount(path: string, field: "senders" | "integrations" | "agents"): Promise<number> {
+  const r = await callMiddleware(env, { method: "GET", path, cookie: cookie ?? undefined });
+  const body = (await r.json().catch(() => null)) as ApiEnvelope<Record<string, unknown[]>> | null;
+  if (r.ok && body?.success && Array.isArray(body.data[field])) {
+    return (body.data[field] as unknown[]).length;
+  }
+  return 0;
+}
+
+const senderCount = await fetchCount(`/api/tenant/${encodeURIComponent(tenantId)}/senders`, "senders");
+const integrationCount = await fetchCount(`/api/tenant/${encodeURIComponent(tenantId)}/integrations`, "integrations");
+const agentCount = await fetchCount(`/api/tenant/${encodeURIComponent(tenantId)}/agents`, "agents");
+
+const expiresIn = pinData ? Math.max(0, pinData.expires_at - Math.floor(Date.now() / 1000)) : 0;
+---
+
+<Dashboard title={`${tenantId} — rubot`}>
+  <TenantNav tenantId={tenantId} active="overview" />
+
+  <section style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+    <a href={`/dashboard/${tenantId}/providers`} style="text-decoration:none;color:inherit">
+      <div style="background:#111827;border:1px solid #1f2937;border-radius:12px;padding:20px">
+        <div style="color:#9ca3af;font-size:13px">Connected providers</div>
+        <div style="font-size:28px;font-weight:700;margin-top:4px">{integrationCount}</div>
+      </div>
+    </a>
+    <a href={`/dashboard/${tenantId}/agents`} style="text-decoration:none;color:inherit">
+      <div style="background:#111827;border:1px solid #1f2937;border-radius:12px;padding:20px">
+        <div style="color:#9ca3af;font-size:13px">Registered agents</div>
+        <div style="font-size:28px;font-weight:700;margin-top:4px">{agentCount}</div>
+      </div>
+    </a>
+    <a href={`/dashboard/${tenantId}/senders`} style="text-decoration:none;color:inherit">
+      <div style="background:#111827;border:1px solid #1f2937;border-radius:12px;padding:20px">
+        <div style="color:#9ca3af;font-size:13px">Bound senders</div>
+        <div style="font-size:28px;font-weight:700;margin-top:4px">{senderCount}</div>
+      </div>
+    </a>
+  </section>
+
+  <section style="background:#111827;border:1px solid #1f2937;border-radius:12px;padding:24px">
+    <h2 style="margin-top:0;font-size:16px">Provisioning PIN</h2>
+    <p style="margin:0 0 12px;color:#9ca3af;font-size:14px">
+      Hand this PIN to an end user. They submit it to your public
+      consume endpoint along with their <code>sender_id</code> (Telegram
+      chat id, WhatsApp E.164, Slack user id, …). The binding is
+      single-use and the PIN burns after consume.
+    </p>
+
+    {pinError && (
+      <div style="background:#7f1d1d;color:#fecaca;padding:10px 12px;border-radius:8px;margin-bottom:12px">
+        {pinError}
+      </div>
+    )}
+
+    {pinData ? (
+      <div style="display:flex;gap:24px;align-items:center;margin-bottom:16px">
+        <code style="font-size:32px;letter-spacing:6px;background:#0a0a0a;padding:12px 20px;border-radius:8px">
+          {pinData.pin}
+        </code>
+        <span style="color:#9ca3af;font-size:14px">
+          expires in {Math.floor(expiresIn / 60)}m {expiresIn % 60}s
+        </span>
+      </div>
+    ) : (
+      <p style="color:#9ca3af">No PIN yet.</p>
+    )}
+
+    <form method="POST">
+      <button
+        type="submit"
+        style="padding:10px 16px;background:#f59e0b;color:#111827;border:0;border-radius:8px;font-weight:600;cursor:pointer"
+      >
+        Generate new PIN
+      </button>
+    </form>
+  </section>
+</Dashboard>

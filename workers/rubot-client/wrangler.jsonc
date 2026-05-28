@@ -1,0 +1,32 @@
+/**
+ * rubot-client — Astro-on-Workers tenant-admin dashboard.
+ *
+ * Talks to rubot-middleware over a Service Binding (no public URL needed
+ * for the API hop). Browser → /api/proxy/* → MIDDLEWARE.fetch → middleware
+ * /api/*. The rubot_session cookie is forwarded verbatim.
+ *
+ * Required for the dashboard to be useful:
+ *   RUBOT_DATA_AUTH must be `bearer` here AND on rubot-middleware.
+ *   When `open`, the proxy still works but every middleware /api/auth +
+ *   /api/tenant call returns 404 — the layout shows a "bearer mode only"
+ *   banner.
+ */
+{
+  "compatibility_date": "2026-05-28",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "name": "rubot-client",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "RUBOT_DATA_AUTH": "bearer"
+  },
+  "services": [
+    { "binding": "MIDDLEWARE", "service": "rubot-middleware" }
+  ]
+}

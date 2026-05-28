@@ -1,0 +1,85 @@
+---
+import Dashboard from "../../../layouts/Dashboard.astro";
+import TenantNav from "../../../components/TenantNav.astro";
+import { callMiddleware, type RubotEnv, type ApiEnvelope } from "../../../lib/middleware";
+
+interface AgentEntry {
+  agent_id: string;
+  enabled: boolean;
+}
+
+const { tenantId } = Astro.params as { tenantId: string };
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+const cookie = Astro.request.headers.get("Cookie");
+
+let actionError: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const agent_id = String(form.get("agent_id") ?? "").trim();
+  const enabled = form.get("enabled") === "true";
+
+  const r = await callMiddleware(env, {
+    method: "POST",
+    path: `/api/tenant/${encodeURIComponent(tenantId)}/agents/${encodeURIComponent(agent_id)}/toggle`,
+    cookie: cookie ?? undefined,
+    contentType: "application/json",
+    body: JSON.stringify({ enabled }),
+  });
+  const body = (await r.json().catch(() => null)) as ApiEnvelope<unknown> | null;
+  if (!(r.ok && body?.success)) {
+    actionError = body && !body.success ? body.error : "toggle_failed";
+  }
+}
+
+let agents: AgentEntry[] = [];
+const r = await callMiddleware(env, {
+  method: "GET",
+  path: `/api/tenant/${encodeURIComponent(tenantId)}/agents`,
+  cookie: cookie ?? undefined,
+});
+const body = (await r.json().catch(() => null)) as
+  | ApiEnvelope<{ agents: AgentEntry[] }>
+  | null;
+if (r.ok && body?.success) agents = body.data.agents;
+---
+
+<Dashboard title={`${tenantId} agents — rubot`}>
+  <TenantNav tenantId={tenantId} active="agents" />
+
+  {actionError && <div style="background:#7f1d1d;color:#fecaca;padding:10px 12px;border-radius:8px;margin-bottom:16px">{actionError}</div>}
+
+  <p style="color:#9ca3af;font-size:14px">
+    The orchestrator pulls this list during preflight and filters its
+    planner's capability set accordingly. Disabling an agent here keeps
+    it registered but hides it from this tenant's routing decisions.
+  </p>
+
+  {agents.length === 0 ? (
+    <p style="color:#9ca3af">
+      No agents registered in <code>KNOWN_AGENTS_JSON</code>. Update the
+      rubot-middleware var to expose specialist agents here.
+    </p>
+  ) : (
+    <ul style="list-style:none;padding:0;margin:0">
+      {agents.map((a) => (
+        <li style="display:flex;align-items:center;gap:16px;padding:14px 16px;border:1px solid #1f2937;border-radius:8px;margin-bottom:8px">
+          <strong style="flex:1">{a.agent_id}</strong>
+          <span style={`color:${a.enabled ? "#a7f3d0" : "#fecaca"};font-size:13px`}>
+            {a.enabled ? "enabled" : "disabled"}
+          </span>
+          <form method="POST" style="margin:0">
+            <input type="hidden" name="agent_id" value={a.agent_id} />
+            <input type="hidden" name="enabled" value={String(!a.enabled)} />
+            <button
+              type="submit"
+              style={`padding:6px 12px;background:${a.enabled ? "#7f1d1d" : "#065f46"};color:${a.enabled ? "#fecaca" : "#a7f3d0"};border:0;border-radius:6px;cursor:pointer;font-size:13px`}
+            >
+              {a.enabled ? "Disable" : "Enable"}
+            </button>
+          </form>
+        </li>
+      ))}
+    </ul>
+  )}
+</Dashboard>

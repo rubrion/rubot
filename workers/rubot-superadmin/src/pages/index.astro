@@ -1,0 +1,9 @@
+---
+import { currentManager } from "../lib/session";
+import type { RubotEnv } from "../lib/middleware";
+
+const env = Astro.locals.runtime.env as unknown as RubotEnv;
+const cookie = Astro.request.headers.get("Cookie");
+const manager = await currentManager(env, cookie);
+return Astro.redirect(manager ? "/admin" : "/login");
+---

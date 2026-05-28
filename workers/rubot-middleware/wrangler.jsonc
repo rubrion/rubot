@@ -1,0 +1,34 @@
+/**
+ * rubot-middleware — data/provider proxy + bearer mint.
+ *
+ * Secrets (set via `wrangler secret put`):
+ *   MIDDLEWARE_API_KEY      — inbound auth from rubot-gateway (Service Binding)
+ *   BEARER_SIGNING_SECRET   — HMAC key for short-lived minted bearers (shared with gateway)
+ *   SESSION_SIGNING_SECRET  — HMAC key for the rubot_session manager cookie
+ *                              (only used when RUBOT_DATA_AUTH=bearer)
+ *   RESEND_API_KEY          — optional; empty falls back to dev-log mode
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rubot-middleware",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "vars": {
+    "ENVIRONMENT": "dev",
+    "RUBOT_DEPLOYMENT_HASH": "local",
+    "RUBOT_DATA_AUTH": "bearer",
+    "FRONTEND_URL": "http://localhost:8788",
+    "MAIL_FROM": "Rubot <noreply@example.com>",
+    "MAIL_BRAND_NAME": "Rubot",
+    "KNOWN_AGENTS_JSON": "[\"template\"]",
+    "SUPERADMIN_EMAIL": ""
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "rubot_data", "database_id": "REPLACE_ME" }
+  ],
+  "kv_namespaces": [
+    { "binding": "PROVISIONING", "id": "REPLACE_ME" }
+  ]
+}

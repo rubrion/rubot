@@ -1,0 +1,25 @@
+{
+  "name": "@rubot/logger",
+  "version": "0.1.0",
+  "description": "Structured logging envelope and context propagation for rubot services (TS / CF Workers)",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "hono": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "hono": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "hono": "^4.12.5",
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.0"
+  }
+}
