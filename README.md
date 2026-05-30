@@ -99,6 +99,16 @@ cp -r agents/rubot-agent-template agents/my-agent
 
 Full checklist: [`docs/creating-new-agent.md`](docs/creating-new-agent.md).
 
+## Built with rubot
+
+Projects forked from this scaffold:
+
+- **brad** — a marketing-consultant agent suite (briefing, banner, post,
+  insights) with a per-tenant brand kit and Workers AI image generation.
+  _Private repo._
+
+Built something on rubot? Open a PR adding it here.
+
 ## Docs
 
 | Doc | What |
